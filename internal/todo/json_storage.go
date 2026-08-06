@@ -16,9 +16,13 @@ func NewJSONStorage(path string) *JSONStorage {
 func (j *JSONStorage) Load() ([]Todo, error) {
 	data, err := os.ReadFile(j.path)
 
-	if os.IsNotExist(err) || err != nil {
-		return nil, err
+	if os.IsNotExist(err) {
+    return []Todo{}, nil
 	}
+	
+	if err != nil {
+    return nil, err
+}
 
 	if len(data) == 0 {
     return nil, nil
