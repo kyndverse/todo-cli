@@ -6,14 +6,22 @@ import (
 )
 
 type Service struct {
+	storage Storage
 	todos []Todo
 	nextID int
 }
 
-func New() *Service {
-	return &Service{
-		nextID: 1,
+func New(s Storage) (*Service, error) {
+	todos, err  := s.Load()
+	if err != nil {
+		return nil, err
 	}
+
+	return &Service{
+		storage: s,
+		todos: todos,
+		nextID: calculateNextID(todos),
+	}, nil
 }
 
 func (s *Service) List() []Todo {
@@ -36,6 +44,11 @@ func (s *Service) Add(description string) error {
 	s.todos = append(s.todos, todo)
 	s.nextID++
 
+	err := s.storage.Save(s.todos)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -43,6 +56,12 @@ func (s *Service) Done(id int) error {
 	for i := range s.todos {
     if s.todos[i].ID == id {
       s.todos[i].IsCompleted = true
+
+			err := s.storage.Save(s.todos)
+			if err != nil {
+				return err
+			}
+
       return nil
     }
 	}
@@ -54,9 +73,31 @@ func (s *Service) Delete(id int) error {
 	for i := range s.todos {
     if s.todos[i].ID == id {
       s.todos = append(s.todos[:i], s.todos[i+1:]...)
+
+			err := s.storage.Save(s.todos)
+			if err != nil {
+				return err
+			}
+
       return nil
     }
 	}
 
 	return ErrTodoNotFound
+}
+
+func calculateNextID(todos []Todo) int {
+	if len(todos) == 0 {
+		return  1
+	}
+
+	id := 0
+
+	for _, todo := range todos {
+		if todo.ID > id {
+			id = todo.ID
+		}
+	}
+
+	return id + 1
 }
